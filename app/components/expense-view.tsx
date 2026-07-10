@@ -4,6 +4,7 @@ import { useState, useSyncExternalStore } from "react";
 
 import { ExpenseCalendar } from "@/app/components/expense-calendar";
 import { ExpenseList } from "@/app/components/expense-list";
+import type { DailyRates } from "@/app/lib/daily-rates";
 import type { Expense } from "@/db/schema";
 
 type View = "calendar" | "list";
@@ -28,10 +29,12 @@ export function ExpenseView({
   year,
   month,
   expenses,
+  dailyRates,
 }: {
   year: number;
   month: number;
   expenses: Expense[];
+  dailyRates: DailyRates;
 }) {
   const defaultView = useSyncExternalStore(
     subscribeToViewport,
@@ -68,9 +71,14 @@ export function ExpenseView({
         </div>
       </div>
       {view === "calendar" ? (
-        <ExpenseCalendar year={year} month={month} expenses={expenses} />
+        <ExpenseCalendar
+          year={year}
+          month={month}
+          expenses={expenses}
+          dailyRates={dailyRates}
+        />
       ) : (
-        <ExpenseList expenses={expenses} />
+        <ExpenseList expenses={expenses} dailyRates={dailyRates} />
       )}
     </div>
   );

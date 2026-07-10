@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { rateOnOrBefore, type DailyRates } from "@/app/lib/daily-rates";
 import { daysInMonth, firstWeekdayOfMonth, todayIsoDate } from "@/app/lib/month";
 import { PAYER_BADGE_CLASSES } from "@/app/lib/payer-colors";
 import type { Expense } from "@/db/schema";
@@ -9,16 +10,23 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
   currency: "EUR",
 });
 
+const phpFormatter = new Intl.NumberFormat("en-PH", {
+  style: "currency",
+  currency: "PHP",
+});
+
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function ExpenseCalendar({
   year,
   month,
   expenses,
+  dailyRates,
 }: {
   year: number;
   month: number;
   expenses: Expense[];
+  dailyRates: DailyRates;
 }) {
   const totalDays = daysInMonth(year, month);
   const leadingBlanks = firstWeekdayOfMonth(year, month);
@@ -56,6 +64,7 @@ export function ExpenseCalendar({
         const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
         const dayExpenses = expensesByDay.get(day) ?? [];
         const isToday = dateStr === today;
+        const dayRate = rateOnOrBefore(dailyRates, dateStr);
 
         return (
           <div
@@ -64,15 +73,24 @@ export function ExpenseCalendar({
               isToday ? "border-zinc-900" : "border-zinc-200"
             }`}
           >
-            <span className="text-right text-[11px] text-zinc-400">
-              {day}
-            </span>
+            <div className="flex items-baseline justify-between">
+              {dayExpenses.length > 0 ? (
+                <span className="truncate text-[8px] text-zinc-400">
+                  €1={phpFormatter.format(dayRate)}
+                </span>
+              ) : (
+                <span />
+              )}
+              <span className="text-right text-[11px] text-zinc-400">
+                {day}
+              </span>
+            </div>
             <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto">
               {dayExpenses.map((expense) => (
                 <Link
                   key={expense.id}
                   href={`/expenses/${expense.id}/edit`}
-                  title={`${expense.description} — ${currencyFormatter.format(Number(expense.amount))} — paid by ${expense.paidBy}`}
+                  title={`${expense.description} — ${currencyFormatter.format(Number(expense.amount))} (${phpFormatter.format(Number(expense.amount) * dayRate)}) — paid by ${expense.paidBy}`}
                   className="flex items-center gap-1 rounded bg-zinc-100 px-1 py-0.5 hover:bg-zinc-200"
                 >
                   <span
@@ -83,8 +101,11 @@ export function ExpenseCalendar({
                   <span className="min-w-0 flex-1 truncate">
                     {expense.description}
                   </span>
-                  <span className="whitespace-nowrap tabular-nums">
-                    {currencyFormatter.format(Number(expense.amount))}
+                  <span className="flex shrink-0 flex-col items-end whitespace-nowrap tabular-nums">
+                    <span>{currencyFormatter.format(Number(expense.amount))}</span>
+                    <span className="text-[8px] leading-tight text-zinc-400">
+                      {phpFormatter.format(Number(expense.amount) * dayRate)}
+                    </span>
                   </span>
                 </Link>
               ))}
