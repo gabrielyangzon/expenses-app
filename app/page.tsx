@@ -1,6 +1,6 @@
 import { createExpenseAction } from "@/app/actions";
-import { ExpenseCalendar } from "@/app/components/expense-calendar";
 import { ExpenseForm } from "@/app/components/expense-form";
+import { ExpenseView } from "@/app/components/expense-view";
 import { MonthNav } from "@/app/components/month-nav";
 import { parseMonthParam, todayIsoDate } from "@/app/lib/month";
 import { PAYER_BADGE_CLASSES } from "@/app/lib/payer-colors";
@@ -30,6 +30,9 @@ export default async function Home({
     getMonthTotalsByPayer(year, month),
   ]);
 
+  const [payerA, payerB] = PAYERS;
+  const difference = Number(totalsByPayer[payerA]) - Number(totalsByPayer[payerB]);
+
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-4 py-12">
       <main className="flex w-full max-w-3xl flex-1 flex-col gap-6">
@@ -53,6 +56,13 @@ export default async function Home({
               </span>
             ))}
           </div>
+          <p className="mt-2 text-center text-xs text-zinc-500">
+            {difference === 0
+              ? "Even"
+              : `Difference: ${currencyFormatter.format(Math.abs(difference))} (${
+                  difference > 0 ? payerA : payerB
+                } spent more)`}
+          </p>
         </section>
 
         <section className="rounded-lg border border-zinc-200 bg-white p-4">
@@ -66,7 +76,7 @@ export default async function Home({
 
         <section className="rounded-lg border border-zinc-200 bg-white p-4">
           <h2 className="mb-3 text-lg font-medium text-black">Expenses</h2>
-          <ExpenseCalendar year={year} month={month} expenses={expenses} />
+          <ExpenseView year={year} month={month} expenses={expenses} />
         </section>
       </main>
     </div>
