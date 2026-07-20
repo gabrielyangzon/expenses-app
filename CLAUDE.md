@@ -42,7 +42,11 @@ Full-stack expense tracker: Next.js App Router + Drizzle ORM + Neon Postgres (`d
 
 ### Mutations (`app/actions.ts`)
 
-All three Server Actions (`createExpenseAction`, `updateExpenseAction`, `deleteExpenseAction`) live in one file with a `"use server"` file directive, share a `(formData: FormData) => Promise<void>` signature, and share `parseExpenseInput`/`parseExpenseId` validation helpers. Validation happens here (not just client-side) because Server Actions are directly POST-reachable. `update` and `delete` both `redirect("/")` after `revalidatePath("/")` since they're invoked from the edit page and should return the user to the dashboard.
+All three Server Actions (`createExpenseAction`, `updateExpenseAction`, `deleteExpenseAction`) live in one file with a `"use server"` file directive and share `parseExpenseInput`/`parseExpenseId` validation helpers. Validation happens here (not just client-side) because Server Actions are directly POST-reachable. `update` and `delete` both `redirect("/")` after `revalidatePath("/")` since they're invoked from the edit page and should return the user to the dashboard.
+
+`create` is the odd one out: it stays on the dashboard, so instead of the `(formData) => Promise<void>` signature the other two use, it's a `useActionState` reducer — `(prevState: CreateExpenseState, formData) => Promise<CreateExpenseState>` — that catches validation errors and returns them as `{ status, message }` for inline display rather than throwing into `error.tsx`. Its `submissions` counter is incremented only on success and used as the form's React `key` in `components/add-expense-form.tsx`, which is what clears the fields after an add.
+
+`CreateExpenseState` and its initial value live in `lib/create-expense-state.ts`, **not** in `actions.ts`: a `"use server"` file may only export async functions, so exporting the initial-state object from there fails the build (`invalid-use-server-value`) — and `tsc`/`eslint` won't catch it, only `npm run build` will.
 
 ### UI (`app/`)
 

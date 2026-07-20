@@ -1,7 +1,7 @@
 import { EXPENSE_CATEGORIES, PAYERS, type Expense } from "@/db/schema";
 
 type ExpenseFormProps = {
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => void | Promise<void>;
   defaultValues?: Partial<
     Pick<
       Expense,

@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import type { CreateExpenseState } from "@/app/lib/create-expense-state";
 import { db } from "@/db";
 import { EXPENSE_CATEGORIES, PAYERS, expenses } from "@/db/schema";
 
@@ -68,10 +69,31 @@ function parseExpenseId(formData: FormData) {
   return id;
 }
 
-export async function createExpenseAction(formData: FormData) {
-  const values = parseExpenseInput(formData);
+// Unlike update/delete, create stays on the dashboard, so it reports back
+// through `useActionState` instead of throwing into the error boundary.
+export async function createExpenseAction(
+  prevState: CreateExpenseState,
+  formData: FormData,
+): Promise<CreateExpenseState> {
+  let values;
+  try {
+    values = parseExpenseInput(formData);
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Invalid expense.",
+      submissions: prevState.submissions,
+    };
+  }
+
   await db.insert(expenses).values(values);
   revalidatePath("/");
+
+  return {
+    status: "success",
+    message: `Added “${values.description}” — €${values.amount} on ${values.date}.`,
+    submissions: prevState.submissions + 1,
+  };
 }
 
 export async function updateExpenseAction(formData: FormData) {

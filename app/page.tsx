@@ -1,5 +1,4 @@
-import { createExpenseAction } from "@/app/actions";
-import { ExpenseForm } from "@/app/components/expense-form";
+import { AddExpenseForm } from "@/app/components/add-expense-form";
 import { ExpenseView } from "@/app/components/expense-view";
 import { MonthNav } from "@/app/components/month-nav";
 import { rateOnOrBefore } from "@/app/lib/daily-rates";
@@ -110,11 +109,7 @@ export default async function Home({
 
         <section className="rounded-lg border border-zinc-200 bg-white p-4">
           <h2 className="mb-3 text-lg font-medium text-black">Add expense</h2>
-          <ExpenseForm
-            action={createExpenseAction}
-            defaultValues={{ category: "Food", date: todayIsoDate() }}
-            submitLabel="Add"
-          />
+          <AddExpenseForm defaultCategory="Food" defaultDate={todayIsoDate()} />
         </section>
 
         <section className="rounded-lg border border-zinc-200 bg-white p-4">
