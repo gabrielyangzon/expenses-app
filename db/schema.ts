@@ -46,3 +46,14 @@ export const expenses = pgTable(
 
 export type Expense = typeof expenses.$inferSelect;
 export type NewExpense = typeof expenses.$inferInsert;
+
+/**
+ * Single-PIN app lock. `password` holds a scrypt hash
+ * (`scrypt$<salt>$<derivedKey>`), never the PIN itself — see `scripts/set-pin.mjs`.
+ */
+export const login = pgTable("login", {
+  id: serial("id").primaryKey(),
+  password: text("password").notNull(),
+});
+
+export type Login = typeof login.$inferSelect;

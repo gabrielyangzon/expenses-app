@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { requireSession } from "@/app/lib/auth";
 import type { CreateExpenseState } from "@/app/lib/create-expense-state";
 import { db } from "@/db";
 import { EXPENSE_CATEGORIES, PAYERS, expenses } from "@/db/schema";
@@ -75,6 +76,8 @@ export async function createExpenseAction(
   prevState: CreateExpenseState,
   formData: FormData,
 ): Promise<CreateExpenseState> {
+  await requireSession();
+
   let values;
   try {
     values = parseExpenseInput(formData);
@@ -97,6 +100,7 @@ export async function createExpenseAction(
 }
 
 export async function updateExpenseAction(formData: FormData) {
+  await requireSession();
   const id = parseExpenseId(formData);
   const values = parseExpenseInput(formData);
   await db.update(expenses).set(values).where(eq(expenses.id, id));
@@ -105,6 +109,7 @@ export async function updateExpenseAction(formData: FormData) {
 }
 
 export async function deleteExpenseAction(formData: FormData) {
+  await requireSession();
   const id = parseExpenseId(formData);
   await db.delete(expenses).where(eq(expenses.id, id));
   revalidatePath("/");

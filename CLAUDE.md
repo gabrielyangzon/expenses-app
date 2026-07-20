@@ -58,6 +58,17 @@ All three Server Actions (`createExpenseAction`, `updateExpenseAction`, `deleteE
 - `lib/month.ts` — all year/month arithmetic (parsing the search param, shifting months, days-in-month, today's date) lives here so it's shared between the dashboard, the calendar, and the nav.
 - `lib/payer-colors.ts` — the RoseAnn/Gabriel color map, shared between the calendar badges and the dashboard summary dots so they stay visually consistent.
 
+### Auth (`proxy.ts`, `app/lib/auth.ts`, `app/lib/session.ts`, `app/lib/pin.ts`)
+
+A single shared 4-digit PIN locks the whole app — there are no user accounts, and the `login` table holds exactly one row.
+
+- **The PIN is never stored.** `login.password` holds a scrypt hash (`scrypt$<salt>$<key>`), written only by `npm run set-pin -- 1234`. Don't add a UI that writes the raw PIN.
+- **`SESSION_SECRET` is required** (`openssl rand -hex 32`, in `.env.local` and in Vercel's env vars). `app/lib/session.ts` throws if it's missing rather than falling back to a default — a default would make every session cookie forgeable. The cookie is `<expiry>.<HMAC-SHA256>`, httpOnly + sameSite=lax + secure in production.
+- **Two layers, on purpose.** `proxy.ts` (this version's `middleware.ts` — renamed in Next 16) does an *optimistic* check: cookie signature only, no DB, because it runs on every request including prefetches. Every page and every mutating Server Action additionally calls `requireSession()`. Server Actions are directly POST-reachable, so the proxy alone would not protect them — if you add an action or route, add the `requireSession()` call too.
+- Failed logins return one generic "Incorrect PIN." for both a malformed PIN and a wrong one, so the response reveals nothing.
+
+**Known gap:** there is no rate limiting on the login form. 10,000 PIN combinations is trivially brute-forceable by a script against the public URL; the PIN only stops casual access. Add throttling before treating this as real protection.
+
 ### Styling
 
 Light theme is forced intentionally: `color-scheme: light` is set in `app/globals.css` and no `dark:` Tailwind variants are used anywhere in the app. Don't reintroduce `dark:` classes or a `prefers-color-scheme` media query without being asked — this was a deliberate choice, not an oversight.

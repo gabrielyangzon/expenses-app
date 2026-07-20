@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { updateExpenseAction } from "@/app/actions";
 import { DeleteExpenseButton } from "@/app/components/delete-expense-button";
 import { ExpenseForm } from "@/app/components/expense-form";
+import { requireSession } from "@/app/lib/auth";
 import { db } from "@/db";
 import { expenses } from "@/db/schema";
 
@@ -13,6 +14,8 @@ export default async function EditExpensePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireSession();
+
   const { id: idParam } = await params;
   const id = Number(idParam);
 

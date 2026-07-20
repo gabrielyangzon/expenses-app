@@ -24,6 +24,8 @@ Built with Next.js (App Router), Drizzle ORM, and Neon Postgres.
 - **Categories and payers** — Food, Transport, Housing, Utilities, Entertainment,
   Health, Other; split between two named payers. Both are Postgres enums, so the
   database rejects anything else.
+- **PIN lock** — a single shared 4-digit PIN gates the whole app, stored as a scrypt
+  hash and backed by a signed, httpOnly session cookie.
 
 ## Getting started
 
@@ -36,17 +38,31 @@ npm install
 # Point the app at your database
 cp .env.example .env.local   # then edit DATABASE_URL
 
-# Create the expenses table
+# Create the tables
 npm run db:push
+
+# Set the 4-digit PIN that unlocks the app
+npm run set-pin -- 1234
 
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-`DATABASE_URL` is required — both the app and `drizzle-kit` read it from
-`.env.local`, which is gitignored. Never put a real connection string in
-`.env.example`.
+`DATABASE_URL` and `SESSION_SECRET` are both required, read from `.env.local`
+(gitignored). Generate the secret with `openssl rand -hex 32`. Never put real values
+in `.env.example`.
+
+### About the PIN lock
+
+The app is gated by one shared 4-digit PIN — there are no user accounts. The PIN is
+stored as a scrypt hash, and `npm run set-pin` is the only way to change it.
+
+This is a doorlock, not a vault. Four digits is 10,000 combinations and there is
+**no rate limiting on the login form**, so anyone who finds the URL and runs a script
+can get in within minutes. It keeps out casual visitors; it will not stop someone
+who is actually trying. Add throttling (or a longer PIN) before putting anything
+sensitive behind it.
 
 ## Scripts
 
@@ -60,6 +76,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `npm run db:generate` | Generate SQL migration files |
 | `npm run db:migrate` | Apply generated migrations |
 | `npm run db:studio` | Open Drizzle Studio |
+| `npm run set-pin -- 1234` | Set the app-lock PIN (stored hashed) |
 
 There is no test suite in this repo.
 
@@ -103,7 +120,9 @@ with a fallback rate if the API is unreachable so the dashboard never fails to r
 ## Deployment
 
 Deployed on [Vercel](https://vercel.com); pushes to `main` trigger a production
-deploy. Set `DATABASE_URL` in the project's environment variables.
+deploy. Set both `DATABASE_URL` and `SESSION_SECRET` in the project's environment
+variables — the app throws on boot without a session secret, and it must be the same
+value across deploys or everyone gets logged out.
 
 ## Contributing notes
 

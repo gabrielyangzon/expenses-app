@@ -1,8 +1,10 @@
 import { AddExpenseForm } from "@/app/components/add-expense-form";
 import { ExpenseView } from "@/app/components/expense-view";
+import { LogoutButton } from "@/app/components/logout-button";
 import { MonthNav } from "@/app/components/month-nav";
 import { rateOnOrBefore } from "@/app/lib/daily-rates";
 import { getEurToPhpRate, getEurToPhpRatesForRange } from "@/app/lib/exchange-rate";
+import { requireSession } from "@/app/lib/auth";
 import { parseMonthParam, todayIsoDate } from "@/app/lib/month";
 import { PAYER_BADGE_CLASSES } from "@/app/lib/payer-colors";
 import { PAYERS, type Payer } from "@/db/schema";
@@ -34,6 +36,8 @@ export default async function Home({
 }: {
   searchParams: Promise<{ month?: string }>;
 }) {
+  await requireSession();
+
   const { month: monthParam } = await searchParams;
   const { year, month } = parseMonthParam(monthParam);
   const { start: monthStart, end: monthEndExclusive } = getMonthRange(
@@ -70,7 +74,10 @@ export default async function Home({
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-4 py-12">
       <main className="flex w-full max-w-3xl flex-1 flex-col gap-6">
-        <h1 className="text-2xl font-semibold text-black">Expense Tracker</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-black">Expense Tracker</h1>
+          <LogoutButton />
+        </div>
 
         <section className="rounded-lg border border-zinc-200 bg-white p-4">
           <MonthNav year={year} month={month} />

@@ -3,7 +3,7 @@ import "server-only";
 import { and, desc, gte, lt, sql } from "drizzle-orm";
 
 import { db } from "./index";
-import { PAYERS, type Payer, expenses } from "./schema";
+import { PAYERS, type Payer, expenses, login } from "./schema";
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -58,4 +58,10 @@ export async function getMonthTotalsByPayer(
     totals[row.paidBy] = row.total;
   }
   return totals;
+}
+
+/** The single app-lock row, if a PIN has been set. */
+export async function getStoredPinHash(): Promise<string | null> {
+  const [row] = await db.select().from(login).orderBy(login.id).limit(1);
+  return row?.password ?? null;
 }
