@@ -57,3 +57,16 @@ export const login = pgTable("login", {
 });
 
 export type Login = typeof login.$inferSelect;
+
+/**
+ * Server-side sessions. The cookie carries a random opaque token; only its
+ * SHA-256 hash is stored, so a leaked database dump can't be replayed as a
+ * live session. Because the token is random rather than signed, no signing
+ * secret is needed.
+ */
+export const sessions = pgTable("sessions", {
+  tokenHash: text("token_hash").primaryKey(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
+export type Session = typeof sessions.$inferSelect;

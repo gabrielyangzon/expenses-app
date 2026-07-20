@@ -4,16 +4,18 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
-import { SESSION_COOKIE, isValidSessionValue } from "@/app/lib/session";
+import { SESSION_COOKIE } from "@/app/lib/session-cookie";
+import { isValidSession } from "@/app/lib/session";
 
 export const isAuthenticated = cache(async (): Promise<boolean> => {
   const cookieStore = await cookies();
-  return isValidSessionValue(cookieStore.get(SESSION_COOKIE)?.value);
+  return isValidSession(cookieStore.get(SESSION_COOKIE)?.value);
 });
 
 /**
- * Second line of defence behind `proxy.ts`: the proxy's check is optimistic and
- * routes must not rely on it alone, so every page and mutation calls this too.
+ * The real authorization check. `proxy.ts` only sees whether a cookie exists —
+ * it can't validate the token without a database read, which it must avoid — so
+ * every page and mutation calls this.
  */
 export async function requireSession(): Promise<void> {
   if (!(await isAuthenticated())) {

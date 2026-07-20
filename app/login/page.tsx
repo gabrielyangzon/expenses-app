@@ -1,10 +1,19 @@
+import { redirect } from "next/navigation";
+
 import { LoginForm } from "@/app/components/login-form";
+import { isAuthenticated } from "@/app/lib/auth";
 
 export const metadata = {
   title: "Unlock · Expense Tracker",
 };
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  // Done here rather than in `proxy.ts` because it needs a real session check;
+  // bouncing on cookie presence alone would loop for a stale cookie.
+  if (await isAuthenticated()) {
+    redirect("/");
+  }
+
   return (
     <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 py-12">
       <main className="w-full max-w-xs">

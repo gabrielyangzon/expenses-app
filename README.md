@@ -49,14 +49,17 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-`DATABASE_URL` and `SESSION_SECRET` are both required, read from `.env.local`
-(gitignored). Generate the secret with `openssl rand -hex 32`. Never put real values
-in `.env.example`.
+`DATABASE_URL` is the only required environment variable, read from `.env.local`
+(gitignored). Never put a real connection string in `.env.example`.
 
 ### About the PIN lock
 
 The app is gated by one shared 4-digit PIN — there are no user accounts. The PIN is
 stored as a scrypt hash, and `npm run set-pin` is the only way to change it.
+
+`POST /api/login` checks the PIN and starts a session; `POST /api/logout` ends it.
+Sessions are rows in a `sessions` table with a 1-hour expiry — the cookie holds a
+random opaque token, and only its hash is stored.
 
 This is a doorlock, not a vault. Four digits is 10,000 combinations and there is
 **no rate limiting on the login form**, so anyone who finds the URL and runs a script
@@ -120,9 +123,9 @@ with a fallback rate if the API is unreachable so the dashboard never fails to r
 ## Deployment
 
 Deployed on [Vercel](https://vercel.com); pushes to `main` trigger a production
-deploy. Set both `DATABASE_URL` and `SESSION_SECRET` in the project's environment
-variables — the app throws on boot without a session secret, and it must be the same
-value across deploys or everyone gets logged out.
+deploy. Set `DATABASE_URL` in the project's environment variables — it is the only
+one needed. Sessions live in the database rather than in signed cookies, so there is
+no secret to keep in sync across deploys.
 
 ## Contributing notes
 

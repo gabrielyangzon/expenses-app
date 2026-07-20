@@ -1,18 +1,44 @@
 "use client";
 
-import { useActionState } from "react";
-
-import { loginAction } from "@/app/auth-actions";
-import { LOGIN_INITIAL_STATE } from "@/app/lib/login-state";
+import { useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
 
 export function LoginForm() {
-  const [state, formAction, pending] = useActionState(
-    loginAction,
-    LOGIN_INITIAL_STATE,
-  );
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setPending(true);
+
+    const pin = new FormData(event.currentTarget).get("pin");
+
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setError(data.error ?? "Something went wrong. Try again.");
+        return;
+      }
+
+      router.replace("/");
+      router.refresh();
+    } catch {
+      setError("Couldn't reach the server. Try again.");
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         <label htmlFor="pin" className="text-sm font-medium text-zinc-700">
           PIN
@@ -32,12 +58,12 @@ export function LoginForm() {
         />
       </div>
 
-      {state.error && (
+      {error && (
         <p
           role="alert"
           className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
         >
-          {state.error}
+          {error}
         </p>
       )}
 

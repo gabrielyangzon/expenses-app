@@ -1,55 +1,65 @@
 import "server-only";
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
+import { eq, lt } from "drizzle-orm";
 
-export const SESSION_COOKIE = "session";
+import { SESSION_MAX_AGE_SECONDS } from "@/app/lib/session-cookie";
+import { db } from "@/db";
+import { sessions } from "@/db/schema";
 
-const SESSION_MAX_AGE_SECONDS = 60 * 60; // 1 hour
-
-function getSecret(): string {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) {
-    // Fail closed: without a secret every signature would be forgeable.
-    throw new Error(
-      "SESSION_SECRET is not set. Generate one with `openssl rand -hex 32`.",
-    );
-  }
-  return secret;
+/**
+ * The token is 256 bits of randomness, so it can't be guessed and doesn't need
+ * to be signed — this is what lets the app run without a SESSION_SECRET.
+ */
+function generateToken(): string {
+  return randomBytes(32).toString("base64url");
 }
 
-function sign(payload: string): string {
-  return createHmac("sha256", getSecret()).update(payload).digest("base64url");
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
 }
 
-/** Returns a signed `<expiry>.<signature>` cookie value. */
-export function createSessionValue(): { value: string; maxAge: number } {
-  const expiresAt = Date.now() + SESSION_MAX_AGE_SECONDS * 1000;
-  const payload = String(expiresAt);
-  return {
-    value: `${payload}.${sign(payload)}`,
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  };
+/** Creates a session row and returns the raw token for the cookie. */
+export async function createSession(): Promise<string> {
+  const token = generateToken();
+  const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000);
+
+  await db.insert(sessions).values({ tokenHash: hashToken(token), expiresAt });
+
+  // Opportunistic cleanup so expired rows don't accumulate.
+  await db.delete(sessions).where(lt(sessions.expiresAt, new Date()));
+
+  return token;
 }
 
-export function isValidSessionValue(value: string | undefined): boolean {
-  if (!value) {
+export async function isValidSession(
+  token: string | undefined,
+): Promise<boolean> {
+  if (!token) {
     return false;
   }
 
-  const separator = value.lastIndexOf(".");
-  if (separator === -1) {
+  const [row] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.tokenHash, hashToken(token)))
+    .limit(1);
+
+  if (!row) {
     return false;
   }
 
-  const payload = value.slice(0, separator);
-  const signature = value.slice(separator + 1);
-
-  const expected = Buffer.from(sign(payload));
-  const actual = Buffer.from(signature);
-  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
+  if (row.expiresAt.getTime() <= Date.now()) {
+    await destroySession(token);
     return false;
   }
 
-  const expiresAt = Number(payload);
-  return Number.isFinite(expiresAt) && expiresAt > Date.now();
+  return true;
+}
+
+export async function destroySession(token: string | undefined): Promise<void> {
+  if (!token) {
+    return;
+  }
+  await db.delete(sessions).where(eq(sessions.tokenHash, hashToken(token)));
 }
